@@ -38,8 +38,16 @@ sub access_token_url {
   return shift->_make_url("access_token", @_);
 }
 
+sub refresh_token_url {
+  return shift->_make_url("refresh_token", @_);
+}
+
 sub access_token_method {
   return shift->{access_token_method} || 'POST';
+}
+
+sub refresh_token_method {
+  return shift->{refresh_token_method} || 'POST';
 }
 
 sub _make_url {

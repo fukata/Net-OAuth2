@@ -41,6 +41,29 @@ sub get_access_token {
   return Net::OAuth2::AccessToken->new(%$res_params);
 }
 
+sub refresh_access_token {
+  my $self = shift;
+  my $refresh_token = shift;
+  my %req_params = @_;
+
+  my $request;
+  if ($self->client->refresh_token_method eq 'POST') {
+    $request = POST($self->client->refresh_token_url(), {$self->refresh_token_params($refresh_token, %req_params)});
+  } else {
+    $request = HTTP::Request->new(
+      $self->client->refresh_token_method => $self->client->refresh_token_url($self->refresh_token_params($refresh_token, %req_params))
+    );
+  }
+  my $response = $self->client->request($request);
+  die "Fetch of refresh token failed: " . $response->status_line . ": " . $response->decoded_content unless $response->is_success;
+  my $res_params = _parse_json($response->decoded_content);
+  $res_params = _parse_query_string($response->decoded_content) unless defined $res_params;
+  die "Unable to parse refresh token response '".substr($response->decoded_content, 0, 64)."'" unless defined $res_params;
+  $res_params->{client} = $self->client;
+  $res_params->{refresh_token} = $refresh_token;
+  return Net::OAuth2::AccessToken->new(%$res_params);
+}
+
 sub access_token_params {
   my $self = shift;
   my $code = shift;
@@ -50,6 +73,15 @@ sub access_token_params {
   $options{redirect_uri} = $self->redirect_uri if defined $self->redirect_uri;
   # legacy for pre v2.09 (37Signals)
   $options{type} = 'web_server';
+  return %options;
+}
+
+sub refresh_token_params {
+  my $self = shift;
+  my $refresh_token = shift;
+  my %options = $self->SUPER::refresh_token_params($refresh_token, @_);
+  $options{refresh_token} = $refresh_token;
+  $options{grant_type} = 'refresh_token';
   return %options;
 }
 

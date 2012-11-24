@@ -38,6 +38,15 @@ sub access_token_params {
   return %options;
 }
 
+sub refresh_token_params {
+  my $self = shift;
+  my $refresh_token = shift;
+  my %options = @_;  
+  $options{client_id} = $self->client->id unless defined $options{client_id};
+  $options{client_secret} = $self->client->secret unless defined $options{client_secret};
+  return %options;
+}
+
 =head1 NAME
 
 Net::OAuth2::Profile::Base - OAuth Profile Base Class
