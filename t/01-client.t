@@ -62,19 +62,24 @@ my %params = (
 my @sites = keys %expected_result;
 my $tests = 1; # no warnings;
 foreach my $site_id (@sites) {
-    $tests += @{ $expected_result{$site_id}{authorize_url} } + @{ $expected_result{$site_id}{access_token_url} } + 3;
+    $tests += @{ $expected_result{$site_id}{authorize_url} } + @{ $expected_result{$site_id}{access_token_url} } + 4;
 }
 plan tests => $tests; 
 
 $mock_ua->map(qr{.*}, sub {
-       my $request = shift;
+    my $request = shift;
 # https://graph.facebook.com/oauth/access_token....
 # die $request->uri;
-       my $response = HTTP::Response->new(200, 'OK');
-       if (defined $request->content and $request->content =~ /\bcode=/) {
-         $response->add_content('access_token=abcd&token_type=bearer');
-       }
-       return $response;
+    my $response = HTTP::Response->new(200, 'OK');
+    if (defined $request->content) {
+        if ( $request->content =~ /\bgrant_type=refresh_token/ ) {
+            $response->add_content('access_token=efgh&token_type=bearer');
+        }
+        elsif ( $request->content =~ /\bcode=/ ) {
+            $response->add_content('access_token=abcd&token_type=bearer');
+        }
+    }
+    return $response;
 });
 
 
@@ -103,6 +108,10 @@ foreach my $site_id (@sites) {
 
         $response = $access_token->get('/path?field=value');
 	ok($response->is_success, 'success');
+
+    my $refresh_access_token = client($site_id)->refresh_access_token($access_token->refresh_token);
+#    diag $refresh_access_token->to_string;
+	isa_ok($access_token, 'Net::OAuth2::AccessToken');
 }
 
 sub client {
